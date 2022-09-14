@@ -1,16 +1,12 @@
 package me.wani4ka.yadisk.models;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.annotation.JsonSerialize;
-import com.fasterxml.jackson.databind.ser.std.StdSerializer;
 import me.wani4ka.yadisk.ItemRepository;
 import me.wani4ka.yadisk.exceptions.InvalidImportException;
 
 import javax.persistence.*;
-import java.io.IOException;
 import java.util.*;
 
 @Entity
@@ -19,6 +15,8 @@ public class Item {
     private String url;
     @Id
     private String id;
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+    private Date date;
     private String parentId;
     @JsonIgnore
     @ManyToOne
@@ -41,6 +39,7 @@ public class Item {
         this.id = sysItemImport.getId();
         this.url = sysItemImport.getUrl();
         this.parentId = sysItemImport.getParentId();
+        this.date = new Date();
         this.type = sysItemImport.getType();
         this.children = this.type == ItemType.FOLDER ? new HashSet<>() : null;
         this.size = this.type == ItemType.FILE ? sysItemImport.getSize() : 0;
@@ -56,6 +55,10 @@ public class Item {
 
     public String getId() {
         return id;
+    }
+
+    public Date getDate() {
+        return date;
     }
 
     public int getSize() {
@@ -90,6 +93,7 @@ public class Item {
         result.add(this);
         setUrl(itemImport.getUrl());
         setParentId(itemImport.getParentId());
+        setDate(new Date());
 
         Item parent = getParentObject();
         if (parent != null) {
@@ -148,7 +152,6 @@ public class Item {
 
     private void changeSize(int delta) {
         size = size + delta;
-        System.out.println("Change size of " + id + ": " + size);
         if (parentObject != null)
             parentObject.changeSize(delta);
     }
@@ -163,6 +166,10 @@ public class Item {
 
     protected void setId(String id) {
         this.id = id;
+    }
+
+    protected void setDate(Date date) {
+        this.date = date;
     }
 
     protected void setParentId(String parentId) {
