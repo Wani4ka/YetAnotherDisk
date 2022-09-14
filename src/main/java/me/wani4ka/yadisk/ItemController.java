@@ -10,6 +10,8 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.*;
@@ -20,6 +22,9 @@ public class ItemController {
 
     @Autowired
     private ItemRepository itemRepository;
+    @Autowired
+    private ItemHistoryRepository itemHistoryRepository;
+    private static final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSSXXX");
 
     @GetMapping("/nodes/{id}")
     public Item getNode(@PathVariable String id) throws ItemNotFoundException {
@@ -31,6 +36,8 @@ public class ItemController {
         Set<Item> toSave = new HashSet<>();
         List<Item> toFindParent = new ArrayList<>();
         for (ItemImport itemImport : body.getItems()) {
+            if (!itemImport.isValid())
+                throw new InvalidImportException();
             Optional<Item> existing = itemRepository.findById(itemImport.getId());
             Item item;
             if (existing.isPresent()) {
@@ -44,8 +51,8 @@ public class ItemController {
         }
         Map<String, Item> local = toSave.stream().collect(Collectors.toMap(Item::getId, known -> known));
         toFindParent.forEach(item -> toSave.addAll(item.findParent(itemRepository, local)));
-        toSave.forEach(System.out::println);
         itemRepository.saveAll(toSave);
+        itemHistoryRepository.saveAll(toSave.stream().map(Item::toHistoryUnit).collect(Collectors.toList()));
         return ApiResult.OK;
     }
 
@@ -65,7 +72,20 @@ public class ItemController {
     @GetMapping("/updates")
     public ItemHistoryUnit.Response getUpdates() {
         Date from = Date.from(Instant.now().minus(24, ChronoUnit.HOURS));
-        return new ItemHistoryUnit.Response(itemRepository.findRecentlyUpdatedItems(from).stream()
+        return new ItemHistoryUnit.Response(itemRepository.findItemsByDateAfter(from).stream()
                 .map(Item::toHistoryUnit).toArray(ItemHistoryUnit[]::new));
+    }
+
+    @GetMapping("/node/{id}/history")
+    public ItemHistoryUnit.Response getHistory(@PathVariable String id, @RequestParam(required = false) String dateStart, @RequestParam(required = false) String dateEnd) throws ParseException, ItemNotFoundException {
+        Optional<Item> item = itemRepository.findById(id);
+        if (item.isEmpty())
+            throw new ItemNotFoundException();
+        Date to = dateEnd == null ? new Date() : sdf.parse(dateEnd);
+        List<ItemHistoryUnit> history = dateStart == null ?
+                itemHistoryRepository.findItemHistoryUnitsByItemAndDateBefore(item.get(), to) :
+                itemHistoryRepository.findItemHistoryUnitsByItemAndDateBetween(item.get(), sdf.parse(dateStart), to);
+        history.forEach(unit -> System.out.println(unit.getId() + " " + unit.getDate()));
+       return new ItemHistoryUnit.Response(history.toArray(ItemHistoryUnit[]::new));
     }
 }

@@ -45,6 +45,17 @@ public class ItemImport {
         return size;
     }
 
+    public boolean isValid() {
+        ItemType type = getType();
+        if ((type == ItemType.FOLDER) != (getUrl() == null))
+            return false;
+        if (type == ItemType.FILE && getUrl().length() > 255)
+            return false;
+        if (type == ItemType.FOLDER && getSize() != null)
+            return false;
+        return type != ItemType.FILE || getSize() > 0;
+    }
+
     public static class Request {
         @NotNull
         private final ItemImport[] items;

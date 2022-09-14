@@ -15,6 +15,8 @@ import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
+import java.text.ParseException;
+
 @Order(Ordered.HIGHEST_PRECEDENCE)
 @ControllerAdvice
 public class YadiskExceptionHandler extends ResponseEntityExceptionHandler {
@@ -26,6 +28,11 @@ public class YadiskExceptionHandler extends ResponseEntityExceptionHandler {
     @Override
     protected ResponseEntity<Object> handleMethodArgumentNotValid(MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
         return handleInvalidImport();
+    }
+
+    @ExceptionHandler(ParseException.class)
+    protected ResponseEntity<Object> handleParseException() {
+        return buildResponseEntity(ApiResult.VALIDATION_FAILED);
     }
 
     @ExceptionHandler(InvalidImportException.class)

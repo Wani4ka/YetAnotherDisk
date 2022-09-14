@@ -3,8 +3,10 @@ package me.wani4ka.yadisk.models;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import me.wani4ka.yadisk.ItemRepository;
 import me.wani4ka.yadisk.exceptions.InvalidImportException;
+import org.hibernate.annotations.Cascade;
 
 import javax.persistence.*;
 import java.util.*;
@@ -26,13 +28,19 @@ public class Item {
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @OneToMany(mappedBy = "parentObject", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
     private Set<Item> children;
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Transient
+    private Set<Item> nullableChildren;
+    @JsonIgnore
+    @OneToMany(mappedBy = "item", fetch = FetchType.LAZY, orphanRemoval = true)
+    @Cascade(org.hibernate.annotations.CascadeType.DELETE)
+    private List<ItemHistoryUnit> historyUnits;
 
     protected Item() {}
 
     @PostLoad
     public void postLoad() {
-        if (getType() == ItemType.FILE)
-            setChildren(null);
+        nullableChildren = getType() == ItemType.FOLDER ? children : null;
     }
 
     public Item(ItemImport sysItemImport) {
@@ -69,6 +77,19 @@ public class Item {
         return parentId;
     }
 
+    @JsonProperty("children")
+    public Set<Item> getNullableChildren() {
+        return nullableChildren;
+    }
+
+    protected List<ItemHistoryUnit> getHistoryUnits() {
+        return historyUnits;
+    }
+
+    protected void setHistoryUnits(List<ItemHistoryUnit> historyUnits) {
+        this.historyUnits = historyUnits;
+    }
+
     public Collection<Item> getChildren() {
         return children != null ? Collections.unmodifiableCollection(children) : null;
     }
@@ -81,16 +102,12 @@ public class Item {
         return new ItemHistoryUnit(this);
     }
 
+    public boolean isValidImport(ItemImport itemImport) {
+        return getType() == itemImport.getType() && itemImport.isValid();
+    }
+
     public Collection<Item> update(ItemImport itemImport) throws InvalidImportException {
-        ItemType type = getType();
-        if (type != itemImport.getType()) throw new InvalidImportException();
-        if ((type == ItemType.FOLDER) != (itemImport.getUrl() == null))
-            throw new InvalidImportException();
-        if (type == ItemType.FILE && itemImport.getUrl().length() > 255)
-            throw new InvalidImportException();
-        if (type == ItemType.FOLDER && itemImport.getSize() != null)
-            throw new InvalidImportException();
-        if (type == ItemType.FILE && itemImport.getSize() <= 0)
+        if (!isValidImport(itemImport))
             throw new InvalidImportException();
 
         List<Item> result = new ArrayList<>();
@@ -143,15 +160,19 @@ public class Item {
         if (getType() != ItemType.FOLDER)
             return;
         child.setParentObject(this);
-        if (children.add(child))
+        if (children.add(child)) {
             changeSize(child.getSize());
+            setDate(new Date());
+        }
     }
 
     void removeChild(Item child) {
         if (getType() != ItemType.FOLDER)
             return;
-        if (children.remove(child))
+        if (children.remove(child)) {
             changeSize(-child.getSize());
+            setDate(new Date());
+        }
     }
 
     private void changeSize(int delta) {
@@ -210,5 +231,4 @@ public class Item {
     public String toString() {
         return id;
     }
-
 }
