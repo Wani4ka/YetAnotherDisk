@@ -14,7 +14,6 @@ import java.io.IOException;
 import java.util.*;
 
 @Entity
-@JsonSerialize(using = Item.Serializer.class)
 public class Item {
     private ItemType type;
     private String url;
@@ -31,6 +30,12 @@ public class Item {
     private Set<Item> children;
 
     protected Item() {}
+
+    @PostLoad
+    public void postLoad() {
+        if (getType() == ItemType.FILE)
+            setChildren(null);
+    }
 
     public Item(ItemImport sysItemImport) {
         this.id = sysItemImport.getId();
@@ -195,31 +200,4 @@ public class Item {
         return id;
     }
 
-    public static class Serializer extends StdSerializer<Item> {
-
-        public Serializer() {
-            this(null);
-        }
-
-        public Serializer(Class<Item> t) {
-            super(t);
-        }
-
-        @Override
-        public void serialize(Item value, JsonGenerator gen, SerializerProvider provider) throws IOException {
-            gen.writeStartObject();
-            gen.writeStringField("id", value.id);
-            gen.writeStringField("url", value.url);
-            gen.writeStringField("parentId", value.parentId);
-            gen.writeStringField("type", value.type.name());
-            gen.writeNumberField("size", value.size);
-            if (value.type == ItemType.FOLDER) {
-                gen.writeArrayFieldStart("children");
-                for (Item child : value.children)
-                    gen.writeObject(child);
-                gen.writeEndArray();
-            }
-            gen.writeEndObject();
-        }
-    }
 }
