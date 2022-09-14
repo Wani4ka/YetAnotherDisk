@@ -4,8 +4,10 @@ import com.fasterxml.jackson.annotation.JsonFormat;
 import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.*;
 import me.wani4ka.yadisk.ItemRepository;
 import me.wani4ka.yadisk.exceptions.InvalidImportException;
+import org.hibernate.Hibernate;
 import org.hibernate.annotations.Cascade;
 
 import javax.persistence.*;
@@ -13,27 +15,37 @@ import java.util.*;
 
 @Entity
 public class Item {
+    @Getter @Setter(AccessLevel.PROTECTED)
     private ItemType type;
+    @Getter @Setter(AccessLevel.PROTECTED)
     private String url;
     @Id
+    @Getter @Setter(AccessLevel.PROTECTED)
     private String id;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
+    @Getter @Setter(AccessLevel.PROTECTED)
     private Date date;
+    @Getter @Setter(AccessLevel.PROTECTED)
     private String parentId;
     @JsonIgnore
     @ManyToOne
+    @Getter @Setter(AccessLevel.PROTECTED)
     private Item parentObject;
     @JsonInclude(JsonInclude.Include.NON_NULL)
+    @Getter @Setter(AccessLevel.PROTECTED)
     private int size;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @OneToMany(mappedBy = "parentObject", fetch = FetchType.LAZY, cascade = CascadeType.ALL, orphanRemoval = true)
+    @Getter
     private Set<Item> children;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Transient
+    @Getter(onMethod = @__(@JsonProperty("children")))
     private Set<Item> nullableChildren;
     @JsonIgnore
     @OneToMany(mappedBy = "item", fetch = FetchType.LAZY, orphanRemoval = true)
     @Cascade(org.hibernate.annotations.CascadeType.DELETE)
+    @Getter(AccessLevel.PROTECTED) @Setter(AccessLevel.PROTECTED)
     private List<ItemHistoryUnit> historyUnits;
 
     protected Item() {}
@@ -51,51 +63,6 @@ public class Item {
         this.type = sysItemImport.getType();
         this.children = this.type == ItemType.FOLDER ? new HashSet<>() : null;
         this.size = this.type == ItemType.FILE ? sysItemImport.getSize() : 0;
-    }
-
-    public ItemType getType() {
-        return type;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public String getId() {
-        return id;
-    }
-
-    public Date getDate() {
-        return date;
-    }
-
-    public int getSize() {
-        return size;
-    }
-
-    public String getParentId() {
-        return parentId;
-    }
-
-    @JsonProperty("children")
-    public Set<Item> getNullableChildren() {
-        return nullableChildren;
-    }
-
-    protected List<ItemHistoryUnit> getHistoryUnits() {
-        return historyUnits;
-    }
-
-    protected void setHistoryUnits(List<ItemHistoryUnit> historyUnits) {
-        this.historyUnits = historyUnits;
-    }
-
-    public Collection<Item> getChildren() {
-        return children != null ? Collections.unmodifiableCollection(children) : null;
-    }
-
-    public Item getParentObject() {
-        return parentObject;
     }
 
     public ItemHistoryUnit toHistoryUnit() {
@@ -152,10 +119,6 @@ public class Item {
             parentObject.removeChild(this);
     }
 
-    void setParentObject(Item parent) {
-        this.parentObject = parent;
-    }
-
     void addChild(Item child) {
         if (getType() != ItemType.FOLDER)
             return;
@@ -181,30 +144,6 @@ public class Item {
             parentObject.changeSize(delta);
     }
 
-    protected void setType(ItemType type) {
-        this.type = type;
-    }
-
-    protected void setUrl(String url) {
-        this.url = url;
-    }
-
-    protected void setId(String id) {
-        this.id = id;
-    }
-
-    protected void setDate(Date date) {
-        this.date = date;
-    }
-
-    protected void setParentId(String parentId) {
-        this.parentId = parentId;
-    }
-
-    protected void setSize(int size) {
-        this.size = size;
-    }
-
     protected void setChildren(Set<Item> children) {
         this.children = children;
         if (getType() == ItemType.FOLDER) {
@@ -217,14 +156,14 @@ public class Item {
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
-        if (o == null || getClass() != o.getClass()) return false;
-        Item that = (Item) o;
-        return id.equals(that.id);
+        if (o == null || Hibernate.getClass(this) != Hibernate.getClass(o)) return false;
+        Item item = (Item) o;
+        return id != null && Objects.equals(id, item.id);
     }
 
     @Override
     public int hashCode() {
-        return Objects.hash(id);
+        return id.hashCode();
     }
 
     @Override

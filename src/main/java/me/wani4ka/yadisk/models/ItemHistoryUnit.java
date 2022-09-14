@@ -5,6 +5,10 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.annotation.JsonSerialize;
 import com.fasterxml.jackson.databind.ser.std.ToStringSerializer;
+import lombok.AccessLevel;
+import lombok.Data;
+import lombok.Getter;
+import lombok.Setter;
 
 import javax.persistence.*;
 import java.util.Date;
@@ -15,15 +19,22 @@ public class ItemHistoryUnit {
     @JsonIgnore
     @Id
     @GeneratedValue
+    @Getter @Setter(AccessLevel.PROTECTED)
     private int id;
     @ManyToOne
     @JsonSerialize(using = ToStringSerializer.class)
+    @Getter(onMethod = @__(@JsonProperty("id"))) @Setter(AccessLevel.PROTECTED)
     private Item item;
+    @Getter @Setter(AccessLevel.PROTECTED)
     private String url;
+    @Getter @Setter(AccessLevel.PROTECTED)
     private String parentId;
+    @Getter @Setter(AccessLevel.PROTECTED)
     private ItemType type;
+    @Getter @Setter(AccessLevel.PROTECTED)
     private int size;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ss.SSSXXX")
+    @Getter @Setter(AccessLevel.PROTECTED)
     private Date date;
 
     protected ItemHistoryUnit() {
@@ -42,71 +53,8 @@ public class ItemHistoryUnit {
         this(item, item.getUrl(), item.getParentId(), item.getType(), item.getSize(), item.getDate());
     }
 
-    public int getId() {
-        return id;
-    }
-
-    protected void setId(int index) {
-        this.id = index;
-    }
-
-    @JsonProperty("id")
-    public Item getItem() {
-        return item;
-    }
-
-    protected void setItem(Item id) {
-        this.item = id;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    protected void setUrl(String url) {
-        this.url = url;
-    }
-
-    public String getParentId() {
-        return parentId;
-    }
-
-    protected void setParentId(String parentId) {
-        this.parentId = parentId;
-    }
-
-    public ItemType getType() {
-        return type;
-    }
-
-    protected void setType(ItemType type) {
-        this.type = type;
-    }
-
-    public int getSize() {
-        return size;
-    }
-
-    protected void setSize(int size) {
-        this.size = size;
-    }
-
-    public Date getDate() {
-        return date;
-    }
-
-    protected void setDate(Date date) {
-        this.date = date;
-    }
-
+    @Data
     public static class Response {
         private final ItemHistoryUnit[] items;
-        public Response(ItemHistoryUnit[] items) {
-            this.items = items;
-        }
-
-        public ItemHistoryUnit[] getItems() {
-            return items;
-        }
     }
 }
