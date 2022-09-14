@@ -29,9 +29,14 @@ jobs:
         arguments: |
           bootBuildImage
           --imageName=yadisk
+    - name: set lower case owner name
+      run: |
+        echo "OWNER_LC=${OWNER,,}" >>${GITHUB_ENV}
+      env:
+        OWNER: '${{ github.repository_owner }}'
     - name: Tag & publish to GitHub Container Registry
       run: |
-        IMAGE_ID=ghcr.io/${{ github.repository_owner }}/yadisk
+        IMAGE_ID=ghcr.io/$OWNER_LC/yadisk
         VERSION=latest
         docker tag yadisk $IMAGE_ID:$VERSION
         docker push $IMAGE_ID:$VERSION
