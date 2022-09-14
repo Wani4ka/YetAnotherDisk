@@ -77,6 +77,10 @@ public class Item {
         return parentObject;
     }
 
+    public ItemHistoryUnit toHistoryUnit() {
+        return new ItemHistoryUnit(this);
+    }
+
     public Collection<Item> update(ItemImport itemImport) throws InvalidImportException {
         ItemType type = getType();
         if (type != itemImport.getType()) throw new InvalidImportException();

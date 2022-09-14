@@ -4,11 +4,14 @@ import me.wani4ka.yadisk.exceptions.InvalidImportException;
 import me.wani4ka.yadisk.exceptions.ItemNotFoundException;
 import me.wani4ka.yadisk.models.ApiResult;
 import me.wani4ka.yadisk.models.Item;
+import me.wani4ka.yadisk.models.ItemHistoryUnit;
 import me.wani4ka.yadisk.models.ItemImport;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
 import java.util.*;
 import java.util.stream.Collectors;
 
@@ -57,5 +60,12 @@ public class ItemController {
         }
         itemRepository.deleteById(id);
         return ApiResult.OK;
+    }
+
+    @GetMapping("/updates")
+    public ItemHistoryUnit.Response getUpdates() {
+        Date from = Date.from(Instant.now().minus(24, ChronoUnit.HOURS));
+        return new ItemHistoryUnit.Response(itemRepository.findRecentlyUpdatedItems(from).stream()
+                .map(Item::toHistoryUnit).toArray(ItemHistoryUnit[]::new));
     }
 }
