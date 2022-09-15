@@ -20,8 +20,6 @@ import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.*;
 
 import static org.springframework.test.util.AssertionErrors.assertTrue;
@@ -89,21 +87,22 @@ class YadiskApplicationTests {
 	}
 
 	private void walk(Item current, Collection<String> result) {
-		result.add(current.getId());
 		if (current.getType() == ItemType.FOLDER)
 			for (Item child : current.getChildren())
 				walk(child, result);
+		else result.add(current.getId());
 	}
 
 	@Test
 	@Order(3)
 	@Transactional
 	public void shouldReturnHistory() throws Exception {
-		mockMvc.perform(get("/updates?date={now}", sdf.format(new Date())))
+		Date now = new Date();
+		mockMvc.perform(get("/updates?date={now}", sdf.format(now)))
 				.andDo(print()).andExpect(status().isOk());
 		Set<String> actualItems = new HashSet<>();
 		walk(itemService.getItem("root"), actualItems);
-		ItemHistoryUnit[] changedItems = itemService.getRecentlyChangedFiles(Date.from(Instant.now().minus(24, ChronoUnit.HOURS)));
+		ItemHistoryUnit[] changedItems = itemService.getRecentlyChangedFiles(now);
 		Arrays.stream(changedItems).forEach(unit -> actualItems.remove(unit.getItem().getId()));
 		assertTrue("Not all items are considered as recently changed", actualItems.isEmpty());
 	}
