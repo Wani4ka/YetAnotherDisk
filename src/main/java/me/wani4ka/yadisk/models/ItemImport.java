@@ -1,6 +1,7 @@
 package me.wani4ka.yadisk.models;
 
 import com.fasterxml.jackson.annotation.JsonFormat;
+import lombok.Data;
 
 import javax.validation.constraints.NotNull;
 import java.util.ArrayList;
@@ -56,24 +57,17 @@ public class ItemImport {
         return type != ItemType.FILE || getSize() > 0;
     }
 
+    @Data
     public static class Request {
         @NotNull
-        private final ItemImport[] items;
+        private ItemImport[] items;
         @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
         @NotNull
-        private final Date updateDate;
+        private Date updateDate;
 
         public Request(ItemImport[] items, Date updateDate) {
             this.items = items;
             this.updateDate = updateDate;
-        }
-
-        public ItemImport[] getItems() {
-            return items;
-        }
-
-        public Date getUpdateDate() {
-            return updateDate;
         }
 
         public static class Builder {
