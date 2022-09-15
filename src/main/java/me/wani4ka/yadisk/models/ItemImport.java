@@ -70,6 +70,8 @@ public class ItemImport {
             this.updateDate = updateDate;
         }
 
+        public Request() {}
+
         public static class Builder {
             private final List<ItemImport> items = new ArrayList<>();
 
