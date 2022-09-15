@@ -25,7 +25,7 @@ public class ItemService {
         return repository.findById(id).orElseThrow(ItemNotFoundException::new);
     }
 
-    public void importItems(ItemImport[] itemImports) throws ValidationFailedException {
+    public void importItems(ItemImport[] itemImports, Date when) throws ValidationFailedException {
         Set<Item> toSave = new HashSet<>();
         List<Item> toFindParent = new ArrayList<>();
         for (ItemImport itemImport : itemImports) {
@@ -34,10 +34,10 @@ public class ItemService {
             Optional<Item> existing = repository.findById(itemImport.getId());
             Item item;
             if (existing.isPresent()) {
-                toSave.addAll(existing.get().update(itemImport));
+                toSave.addAll(existing.get().update(itemImport, when));
                 item = existing.get();
             } else {
-                item = new Item(itemImport);
+                item = Item.fromImport(itemImport, when);
                 toSave.add(item);
             }
             toFindParent.add(item);
@@ -48,18 +48,18 @@ public class ItemService {
         historyUnitsService.addHistoryUnits(toSave);
     }
 
-    public void deleteItem(Item item) throws ItemNotFoundException {
+    public void deleteItem(Item item, Date when) throws ItemNotFoundException {
         if (item == null)
             throw new ItemNotFoundException();
         if (item.getParentObject() != null) {
-            item.unparent();
+            item.unparent(when);
             repository.save(item.getParentObject());
         }
         repository.delete(item);
     }
 
-    public ItemHistoryUnit[] findRecentlyChangedItems(Date from) {
-        return repository.findItemsByDateAfter(from).stream().map(ItemHistoryUnit::new).toArray(ItemHistoryUnit[]::new);
+    public ItemHistoryUnit[] getRecentlyChangedFiles(Date to) {
+        return historyUnitsService.getRecentlyChangedFiles(to);
     }
 
     public ItemHistoryUnit[] getChangesHistory(Item item, Date from, Date to) throws ItemNotFoundException {
@@ -70,10 +70,6 @@ public class ItemService {
         List<Item> result = new ArrayList<>();
         if (item.getParentId() == null)
             return result;
-        if (item.getParentObject() != null) {
-            result.add(item.getParentObject());
-            item.getParentObject().removeChild(item);
-        }
         Item parent = local.getOrDefault(item.getParentId(), repository.findById(item.getParentId()).orElse(null));
         if (parent != null) {
             item.setParentObject(parent);

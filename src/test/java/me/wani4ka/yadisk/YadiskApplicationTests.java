@@ -103,7 +103,7 @@ class YadiskApplicationTests {
 				.andDo(print()).andExpect(status().isOk());
 		Set<String> actualItems = new HashSet<>();
 		walk(itemService.getItem("root"), actualItems);
-		ItemHistoryUnit[] changedItems = itemService.findRecentlyChangedItems(Date.from(Instant.now().minus(24, ChronoUnit.HOURS)));
+		ItemHistoryUnit[] changedItems = itemService.getRecentlyChangedFiles(Date.from(Instant.now().minus(24, ChronoUnit.HOURS)));
 		Arrays.stream(changedItems).forEach(unit -> actualItems.remove(unit.getItem().getId()));
 		assertTrue("Not all items are considered as recently changed", actualItems.isEmpty());
 	}

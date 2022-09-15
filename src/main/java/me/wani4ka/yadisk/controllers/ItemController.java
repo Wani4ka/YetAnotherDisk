@@ -14,8 +14,6 @@ import org.springframework.web.bind.annotation.*;
 import javax.validation.Valid;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
 import java.util.Date;
 
 @RestController
@@ -32,20 +30,19 @@ public class ItemController {
 
     @PostMapping("/imports")
     public ApiResult importsPost(@Valid @RequestBody ItemImport.Request body) throws ValidationFailedException {
-        itemService.importItems(body.getItems());
+        itemService.importItems(body.getItems(), body.getUpdateDate());
         return ApiResult.OK;
     }
 
     @DeleteMapping("/delete/{id}")
     public ApiResult delete(@PathVariable String id, @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date date) throws ItemNotFoundException {
-        itemService.deleteItem(itemService.getItem(id));
+        itemService.deleteItem(itemService.getItem(id), date);
         return ApiResult.OK;
     }
 
     @GetMapping("/updates")
     public ItemHistoryUnit.Response getUpdates(@RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE_TIME) Date date) {
-        Date from = Date.from(Instant.now().minus(24, ChronoUnit.HOURS));
-        return new ItemHistoryUnit.Response(itemService.findRecentlyChangedItems(from));
+        return new ItemHistoryUnit.Response(itemService.getRecentlyChangedFiles(date));
     }
 
     @GetMapping("/node/{id}/history")

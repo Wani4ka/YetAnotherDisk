@@ -9,5 +9,6 @@ import java.util.List;
 
 public interface ItemHistoryRepository extends CrudRepository<ItemHistoryUnit, String> {
     List<ItemHistoryUnit> findItemHistoryUnitsByItemAndDateBefore(Item item, Date date);
-    List<ItemHistoryUnit> findItemHistoryUnitsByItemAndDateBetween(Item item, Date date, Date date2);
+    List<ItemHistoryUnit> findItemHistoryUnitsByDateBetween(Date from, Date to);
+    List<ItemHistoryUnit> findItemHistoryUnitsByItemAndDateBetween(Item item, Date from, Date to);
 }

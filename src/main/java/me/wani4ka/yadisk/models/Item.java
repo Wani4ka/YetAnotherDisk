@@ -22,7 +22,7 @@ public class Item {
     @Getter @Setter(AccessLevel.PROTECTED)
     private String id;
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd'T'HH:mm:ssXXX")
-    @Getter @Setter(AccessLevel.PROTECTED)
+    @Getter @Setter
     private Date date;
     @Getter @Setter(AccessLevel.PROTECTED)
     private String parentId;
@@ -54,7 +54,7 @@ public class Item {
         nullableChildren = getType() == ItemType.FOLDER ? children : null;
     }
 
-    public Item(ItemImport sysItemImport) {
+    private Item(ItemImport sysItemImport) {
         this.id = sysItemImport.getId();
         this.url = sysItemImport.getUrl();
         this.parentId = sysItemImport.getParentId();
@@ -64,15 +64,17 @@ public class Item {
         this.size = this.type == ItemType.FILE ? sysItemImport.getSize() : 0;
     }
 
-    public ItemHistoryUnit toHistoryUnit() {
-        return new ItemHistoryUnit(this);
+    public static Item fromImport(ItemImport itemImport, Date when) {
+        Item result = new Item(itemImport);
+        result.date = when;
+        return result;
     }
 
     public boolean isValidImport(ItemImport itemImport) {
         return getType() == itemImport.getType() && itemImport.isValid();
     }
 
-    public Collection<Item> update(ItemImport itemImport) throws ValidationFailedException {
+    public Collection<Item> update(ItemImport itemImport, Date when) throws ValidationFailedException {
         if (!isValidImport(itemImport))
             throw new ValidationFailedException();
 
@@ -80,24 +82,24 @@ public class Item {
         result.add(this);
         setUrl(itemImport.getUrl());
         setParentId(itemImport.getParentId());
-        setDate(new Date());
 
         Item parent = getParentObject();
         if (parent != null) {
-            parent.removeChild(this);
+            parent.removeChild(this, when);
             result.add(parent);
             setParentObject(null); // need to call findParent after a while
         }
         if (type == ItemType.FILE)
             setSize(itemImport.getSize());
+        updateDate(when);
 
         return result;
     }
 
-    public void unparent() {
+    public void unparent(Date when) {
         setParentId(null);
         if (parentObject != null)
-            parentObject.removeChild(this);
+            parentObject.removeChild(this, when);
     }
 
     public void addChild(Item child) {
@@ -106,16 +108,24 @@ public class Item {
         child.setParentObject(this);
         if (children.add(child)) {
             changeSize(child.getSize());
-            setDate(new Date());
+            updateDate(child.getDate());
         }
     }
 
-    public void removeChild(Item child) {
+    public void removeChild(Item child, Date when) {
         if (getType() != ItemType.FOLDER)
             return;
         if (children.remove(child)) {
             changeSize(-child.getSize());
-            setDate(new Date());
+            updateDate(when);
+        }
+    }
+
+    public void updateDate(Date date) {
+        if (this.date.before(date)) {
+            this.date = date;
+            if (parentObject != null)
+                parentObject.updateDate(date);
         }
     }
 

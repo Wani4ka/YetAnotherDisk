@@ -1,6 +1,5 @@
 package me.wani4ka.yadisk;
 
-import lombok.Data;
 import me.wani4ka.yadisk.exceptions.ApiException;
 import me.wani4ka.yadisk.exceptions.ValidationFailedException;
 import me.wani4ka.yadisk.models.ApiResult;
@@ -46,14 +45,6 @@ public class YadiskExceptionHandler extends ResponseEntityExceptionHandler {
         return handleException(new ValidationFailedException());
     }
 
-//    @ExceptionHandler(NoHandlerFoundException.class)
-//    @ResponseBody
-//    @ResponseStatus(HttpStatus.NOT_FOUND)
-//    protected ApiResult handleNotFound(NoHandlerFoundException ex) {
-//        return new ApiResult(404, "Not found");
-//    }
-
-
     @Override
     @ResponseStatus
     protected ResponseEntity<Object> handleNoHandlerFoundException(NoHandlerFoundException ex, HttpHeaders headers, HttpStatus status, WebRequest request) {
@@ -63,7 +54,6 @@ public class YadiskExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ApiException.class)
     @ResponseBody
     protected ResponseEntity<Object> handleException(ApiException e) {
-        System.out.println(e.getStatus().value() + " " + e.getMessage());
         return ResponseEntity.status(e.getStatus()).body(new ApiResult(e.getStatus().value(), e.getMessage()));
     }
 }
