@@ -5,8 +5,7 @@ import com.fasterxml.jackson.annotation.JsonIgnore;
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.*;
-import me.wani4ka.yadisk.ItemRepository;
-import me.wani4ka.yadisk.exceptions.InvalidImportException;
+import me.wani4ka.yadisk.exceptions.ValidationFailedException;
 import org.hibernate.Hibernate;
 import org.hibernate.annotations.Cascade;
 
@@ -29,7 +28,7 @@ public class Item {
     private String parentId;
     @JsonIgnore
     @ManyToOne
-    @Getter @Setter(AccessLevel.PROTECTED)
+    @Getter @Setter
     private Item parentObject;
     @JsonInclude(JsonInclude.Include.NON_NULL)
     @Getter @Setter(AccessLevel.PROTECTED)
@@ -73,9 +72,9 @@ public class Item {
         return getType() == itemImport.getType() && itemImport.isValid();
     }
 
-    public Collection<Item> update(ItemImport itemImport) throws InvalidImportException {
+    public Collection<Item> update(ItemImport itemImport) throws ValidationFailedException {
         if (!isValidImport(itemImport))
-            throw new InvalidImportException();
+            throw new ValidationFailedException();
 
         List<Item> result = new ArrayList<>();
         result.add(this);
@@ -95,31 +94,13 @@ public class Item {
         return result;
     }
 
-    public Collection<Item> findParent(ItemRepository repo, Map<String, Item> local) {
-        List<Item> result = new ArrayList<>();
-        if (parentId == null)
-            return result;
-        if (parentObject != null) {
-            parentObject.removeChild(this);
-            result.add(parentObject);
-        }
-        Item parent = local.getOrDefault(parentId, repo.findById(parentId).orElse(null));
-        if (parent != null) {
-            setParentObject(parent);
-            parent.addChild(this);
-            result.add(parent);
-        }
-        result.add(this);
-        return result;
-    }
-
     public void unparent() {
         setParentId(null);
         if (parentObject != null)
             parentObject.removeChild(this);
     }
 
-    void addChild(Item child) {
+    public void addChild(Item child) {
         if (getType() != ItemType.FOLDER)
             return;
         child.setParentObject(this);
@@ -129,7 +110,7 @@ public class Item {
         }
     }
 
-    void removeChild(Item child) {
+    public void removeChild(Item child) {
         if (getType() != ItemType.FOLDER)
             return;
         if (children.remove(child)) {

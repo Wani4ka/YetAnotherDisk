@@ -2,24 +2,37 @@ package me.wani4ka.yadisk;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import me.wani4ka.yadisk.exceptions.ItemNotFoundException;
+import me.wani4ka.yadisk.models.Item;
+import me.wani4ka.yadisk.models.ItemHistoryUnit;
 import me.wani4ka.yadisk.models.ItemImport;
+import me.wani4ka.yadisk.models.ItemType;
+import me.wani4ka.yadisk.services.ItemService;
+import org.junit.jupiter.api.MethodOrderer;
 import org.junit.jupiter.api.Order;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.TestMethodOrder;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.http.MediaType;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
+import org.springframework.transaction.annotation.Transactional;
 
 import java.text.SimpleDateFormat;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
 
 import static org.springframework.test.util.AssertionErrors.assertTrue;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultHandlers.print;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@SpringBootTest
+@SpringBootTest(classes = YadiskApplication.class)
 @AutoConfigureMockMvc
+@TestPropertySource(locations = "classpath:application-test.properties")
+@TestMethodOrder(MethodOrderer.OrderAnnotation.class)
 class YadiskApplicationTests {
 
 	private static final ObjectMapper mapper = new ObjectMapper();
@@ -50,6 +63,9 @@ class YadiskApplicationTests {
 	@Autowired
 	private MockMvc mockMvc;
 
+	@Autowired
+	private ItemService itemService;
+
 	@Test
 	@Order(1)
 	public void shouldImport() throws Exception {
@@ -72,10 +88,40 @@ class YadiskApplicationTests {
 				.andExpect(jsonPath("$.children").isNotEmpty());
 	}
 
+	private void walk(Item current, Collection<String> result) {
+		result.add(current.getId());
+		if (current.getType() == ItemType.FOLDER)
+			for (Item child : current.getChildren())
+				walk(child, result);
+	}
+
 	@Test
 	@Order(3)
+	@Transactional
+	public void shouldReturnHistory() throws Exception {
+		mockMvc.perform(get("/updates?date={now}", sdf.format(new Date())))
+				.andDo(print()).andExpect(status().isOk());
+		Set<String> actualItems = new HashSet<>();
+		walk(itemService.getItem("root"), actualItems);
+		ItemHistoryUnit[] changedItems = itemService.findRecentlyChangedItems(Date.from(Instant.now().minus(24, ChronoUnit.HOURS)));
+		Arrays.stream(changedItems).forEach(unit -> actualItems.remove(unit.getItem().getId()));
+		assertTrue("Not all items are considered as recently changed", actualItems.isEmpty());
+	}
+
+	@Test
+	@Order(4)
+	public void shouldUpdateRootSize() throws Exception {
+		mockMvc.perform(get("/node/{id}/history", "root"))
+				.andDo(print()).andExpect(status().isOk());
+		ItemHistoryUnit[] changes = itemService.getChangesHistory(itemService.getItem("root"), null, new Date());
+		for (int i = 1; i < changes.length; ++i)
+			assertTrue("Order is incorrect (" + i + ")", changes[i].getSize() > changes[i-1].getSize());
+	}
+
+	@Test
+	@Order(5)
 	public void shouldRemoveRootAndChildren() throws Exception {
-		mockMvc.perform(delete("/delete/{id}", "root"))
+		mockMvc.perform(delete("/delete/{id}?date={now}", "root", sdf.format(new Date())))
 				.andDo(print()).andExpect(status().isOk())
 				.andExpect(content().json(RESULT_OK));
 		for (ItemImport.Request req : test1Requests)
@@ -84,7 +130,7 @@ class YadiskApplicationTests {
 						.andDo(print())
 						.andExpect(status().isNotFound())
 						.andExpect(content().json(RESULT_NOT_FOUND))
-						.andExpect(result -> assertTrue("No exception is throws", result.getResolvedException() instanceof ItemNotFoundException));
+						.andExpect(result -> assertTrue("No exception is thrown", result.getResolvedException() instanceof ItemNotFoundException));
 	}
 
 	@Test
@@ -103,6 +149,10 @@ class YadiskApplicationTests {
 		mockMvc.perform(post("/imports")
 				.contentType(MediaType.APPLICATION_JSON)
 				.content("i am crazy lol"))
+				.andDo(print())
+				.andExpect(status().isBadRequest())
+				.andExpect(content().json(RESULT_VALIDATION_FAILED));
+		mockMvc.perform(delete("/delete/{id}", "root")) // no date
 				.andDo(print())
 				.andExpect(status().isBadRequest())
 				.andExpect(content().json(RESULT_VALIDATION_FAILED));

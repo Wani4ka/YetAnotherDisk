@@ -1,4 +1,4 @@
-package me.wani4ka.yadisk;
+package me.wani4ka.yadisk.repositories;
 
 import me.wani4ka.yadisk.models.Item;
 import me.wani4ka.yadisk.models.ItemHistoryUnit;
