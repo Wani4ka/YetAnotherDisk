@@ -26,7 +26,7 @@ public class ItemService {
     }
 
     public void importItems(ItemImport[] itemImports, Date when) throws ValidationFailedException {
-        Set<Item> toSave = new HashSet<>();
+        List<Item> toSave = new ArrayList<>();
         List<Item> toFindParent = new ArrayList<>();
         for (ItemImport itemImport : itemImports) {
             if (!itemImport.isValid())
@@ -43,7 +43,9 @@ public class ItemService {
             toFindParent.add(item);
         }
         Map<String, Item> local = toSave.stream().collect(Collectors.toMap(Item::getId, known -> known));
-        toFindParent.forEach(item -> toSave.addAll(findParentForItem(item, local)));
+        for (Item child : toFindParent)
+            toSave.addAll(findParentForItem(child, local));
+        toSave = toSave.stream().distinct().toList();
         repository.saveAll(toSave);
         historyUnitsService.addHistoryUnits(toSave);
     }
