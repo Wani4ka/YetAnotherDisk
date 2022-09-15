@@ -8,15 +8,16 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+@Data
 public class ItemImport {
 
     @NotNull
-    private final String id;
-    private final String url;
-    private final String parentId;
+    private String id;
+    private String url;
+    private String parentId;
     @NotNull
-    private final ItemType type;
-    private final Integer size;
+    private ItemType type;
+    private Integer size;
 
     public ItemImport(String id, String url, String parentId, ItemType type, Integer size) {
         this.id = id;
@@ -26,25 +27,7 @@ public class ItemImport {
         this.size = size;
     }
 
-    public String getId() {
-        return id;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public String getParentId() {
-        return parentId;
-    }
-
-    public ItemType getType() {
-        return type;
-    }
-
-    public Integer getSize() {
-        return size;
-    }
+    public ItemImport() {}
 
     public boolean isValid() {
         ItemType type = getType();
